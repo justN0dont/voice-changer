@@ -26,8 +26,8 @@ from test_dsp import FURTHER_PER_HOP, stream, tracked_harmonic_dips, voice_like 
 
 SR = 48000
 ROOT = Path(__file__).resolve().parents[1]
-PRE_CHARACTER = "0e53a0517c76c052e250f263ab27b5f2be2d33e1"  # last commit before these controls
-PRE_NORMALISED = "b08ded4cb3365bbd5169a3307de32c353e375fa8"  # last before jitter/gravel were made rate-independent
+PRE_CHARACTER = "20bf34327ce8c666cfc753fb1e81cf5c3cf04b2c"  # last commit before these controls
+PRE_NORMALISED = "7e0b50b9bf1bac5a0938ba6277dbff831d6818fe"  # last before jitter/gravel were made rate-independent
 # The shifter's older per-bin phase memory. Comparisons with old code use it:
 # per-sinusoid phase tracking changes every pitch-shifted frame's phases, so
 # it would hide whatever else the comparison is meant to catch.
