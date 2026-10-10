@@ -57,7 +57,8 @@ private:
     void shift_peaks(double r);      // fills spec_out_ from analysis buffers
     // Phase at frame start of a sinusoid at f bins drawn at `drawn` (see
     // spectral.py _next_phase). Within a frame, calls come in ascending f:
-    // `cursor` walks the previous frame's list alongside.
+    // `cursor` walks the previous frame's list (moved by ratio_change_, which
+    // keeps it ascending) alongside.
     double next_phase(double f, double drawn, int dest, int& cursor) const;
     void keep_sinusoids(bool drawn_at_bin);  // this frame's peak_* lists become prev_*
     void add_breath();               // mixes aspiration noise into spec_out_
@@ -89,6 +90,9 @@ private:
     uint64_t frame_index_ = 0;   // frames since reset: the counter for jitter, breath and whisper draws
     uint64_t tremor_cycle_ = 0;  // completed tremor cycles: the counter for its rate draws
     double tremor_phase_ = 0.0, jitter_state_ = 0.0;
+    // The last frame's pitch ratio after tremor and jitter, and this frame's
+    // over it: next_phase moves the previous frame's sinusoids by the latter.
+    double ratio_ = 1.0, ratio_change_ = 1.0;
 
     // per-frame scratch
     std::vector<double> re_, im_, mag_, phase_, true_freq_, log_env_, flat_, new_phase_;

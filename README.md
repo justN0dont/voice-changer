@@ -178,8 +178,12 @@ Voices:
 
 Characters, built on the character controls below:
 
-- `old_lady`: pitch up 8 with slightly raised formants, a gentle 6 Hz tremor,
-  unsteady pitch, breathiness, a faint rasp and a thin, soft tone.
+- `old_lady`: a quavering old woman. Pitch at the low end of the female range
+  (about 185 Hz calibrated, up 8 otherwise) with formants a little above a
+  woman's, a 5 Hz tremor about a semitone deep, unsteady pitch, a slow waver
+  in loudness, and a little less 3 kHz presence and more warmth around 350 Hz.
+  No breathiness, which reads young. It is most convincing calibrated, and
+  spoken a little slower than usual.
 - `old_man`: a touch lower with a slightly longer vocal tract, a 5 Hz tremor,
   unsteady pitch, breath, a little gravel, a thinner chest and a softer top.
 - `kid`: an octave up with a much smaller vocal tract (formants up 5), a little
@@ -213,9 +217,9 @@ The *Character* sliders add the cues listeners use to judge age and texture.
 Tremor, Shakiness, Breathiness and Gravel start at zero, and at zero the
 output is bit-for-bit the same as without them.
 
-- **Tremor** (0–2 semitones, typically 0.3–0.7): a regular pitch swing of up to
-  this much either way, with loudness rising and falling in step, as in a sung
-  vibrato or an aged, shaky voice.
+- **Tremor** (0–2 semitones, typically 0.3–0.7, about 1 for a quavering old
+  voice): a regular pitch swing of up to this much either way, with loudness
+  rising and falling in step, as in a sung vibrato or an aged, shaky voice.
 - **Tremor rate** (2–10 Hz): how fast it swings. Aged voices and vibrato sit
   around 5–7 Hz, slower sounds eerie, faster becomes a warble. Each cycle runs
   up to ±10% off it (about 6% on average), as natural tremor does, so it never
@@ -257,8 +261,10 @@ leave the output bit-identical to before they existed, that tremor swings the
 pitch at its set rate and depth with natural cycle-to-cycle variation, that
 shakiness is the same at every quality and sample rate, that harmonics don't
 drop out while tremor, shakiness or the speaker's own glides move the pitch
-(at balanced and high quality, and on a 16 kHz headset mic), that breath keeps
-loudness steady, and that gravel pulses at its rate whatever the block size.
+(at balanced and high quality, and on a 16 kHz headset mic), that even a
+semitone-and-a-half tremor keeps the 3-6 kHz harmonics (balanced, 48 kHz),
+that breath keeps loudness steady, and that gravel pulses at its rate whatever
+the block size.
 
 It also checks that the C++ code inside the Windows effect matches the Python
 reference sample for sample (within 1e-4). That covers every preset, each

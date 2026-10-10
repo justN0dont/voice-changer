@@ -8,10 +8,15 @@ voice much harder to recognise (the "anonymous" preset).
 
 Character voices lean on cues listeners use to judge age and grit rather than
 on big shifts alone. Aged voices are shaky: a 4-7 Hz tremor (tremor_hz,
-tremor_depth) plus cycle-to-cycle pitch jitter, with aspiration noise from a
-leaky glottis (breath) and less high end. Gravel is vocal fry: irregular
-low-rate pulsing (gravel, gravel_hz about 30-50 Hz) that also gives the
-"tough guy", pirate and valley-girl timbres their texture.
+tremor_depth) plus pitch jitter. An old man's also leaks breath and loses high
+end. An old woman's doesn't get breathier: young women are the breathy ones,
+and breath made "old_lady" sound younger to a speech age estimator. Hers
+quavers about a semitone at 5 Hz, wavers in loudness (gravel at a slow 20 Hz),
+sits low in the female range at about 185 Hz, and has a little less presence
+near 3 kHz and more warmth near 350 Hz than a young woman's. Gravel is
+otherwise vocal fry: irregular low-rate pulsing (gravel, gravel_hz about 30-50
+Hz) that also gives the "tough guy", pirate and valley-girl timbres their
+texture.
 
 Shifting pitch moves a voice's energy around: a lowered voice gains a
 sub-bass fundamental and loses presence, a raised one turns thin and bright.
@@ -96,10 +101,9 @@ PRESETS: dict[str, dict] = {
     },
     # characters
     "old_lady": {
-        "pitch": 8, "formant": 2, "tremor_hz": 6, "tremor_depth": 0.35, "jitter": 0.5, "breath": 0.25,
-        "gravel": 0.15, "gravel_hz": 65, "highpass_hz": 140, "lowpass_hz": 10000, "low_hz": 250, "low_db": -2,
-        "mid_hz": 3000, "mid_q": 0.8, "mid_db": -2.5, "high_hz": 6500, "high_db": -2, "comp_threshold_db": -32,
-        "output_gain_db": 1.5
+        "pitch": 8, "formant": 3.5, "tremor_hz": 5.3, "tremor_depth": 1.0, "jitter": 0.7, "gravel": 0.2,
+        "gravel_hz": 20, "highpass_hz": 90, "lowpass_hz": 14000, "low_hz": 350, "low_db": 1.5, "mid_hz": 3000,
+        "mid_q": 1, "mid_db": -4, "high_hz": 6000, "high_db": 1, "comp_threshold_db": -30, "output_gain_db": 0.5
     },
     "old_man": {
         "pitch": -1, "formant": -1, "tremor_hz": 5, "tremor_depth": 0.3, "jitter": 0.55, "breath": 0.2,
@@ -178,11 +182,14 @@ PRESETS: dict[str, dict] = {
 # tract is estimated from their pitch, from 0 at 120 Hz to +3 semitones at
 # 210 Hz (typical adult male and female voices). Uncalibrated, the presets
 # keep their fixed shifts, which assume a voice from the other end of the range.
+# old_lady's tract is a little smaller than a typical woman's: lowered toward
+# 185 Hz with an ordinary female tract, some women's voices started to sound
+# like a man's.
 VOICE_FITS: dict[str, tuple[float, float, float]] = {
     "feminine": (175, 230, 3.0),
     "masculine": (95, 125, 0.0),
     "kid": (240, 300, 5.0),
-    "old_lady": (165, 200, 2.5),
+    "old_lady": (180, 190, 3.5),
     "old_man": (115, 145, -0.5),
     "valley_girl": (200, 250, 3.0),
 }

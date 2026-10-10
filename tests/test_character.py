@@ -369,6 +369,75 @@ def test_harmonics_do_not_drop_out_under_tremor_and_jitter(case, quality, sr):
     assert deepest["after"] > deepest["before"] / 3, dips
 
 
+class UnmovedMatching(SpectralVoice):
+    """The tracker before it allowed for its own pitch change: each partial is
+    matched against where the previous frame's partials were, not where the
+    tremor and jitter have since moved them."""
+
+    def _next_phase(self, f, drawn, dest_bin):
+        moved, self._ratio_change = self._ratio_change, 1.0
+        try:
+            return super()._next_phase(f, drawn, dest_bin)
+        finally:
+            self._ratio_change = moved
+
+
+def counting_fallbacks(cls, lo_hz=3000.0):
+    """``cls``, counting the sinusoids above ``lo_hz`` that found no previous one to
+    continue and fell back to the per-bin phase memory."""
+    class Counting(cls):
+        partials = fallbacks = 0
+
+        def _next_phase(self, f, drawn, dest_bin):
+            saved, self._sum_phase = self._sum_phase, np.full_like(self._sum_phase, np.nan)
+            try:
+                marked = super()._next_phase(f, drawn, dest_bin)  # NaN where it fell back
+            finally:
+                self._sum_phase = saved
+            upper = f * self.sample_rate / self.fft_size >= lo_hz
+            self.partials += int(upper.sum())
+            self.fallbacks += int(np.isnan(marked[upper]).sum())
+            return super()._next_phase(f, drawn, dest_bin)
+    return Counting
+
+
+def band_dip_shares(y, lo, hi):
+    """Shares of 10 ms windows in which the lo..hi band falls 3 and 6 dB or more below
+    its usual level, measured against 150-1000 Hz to cancel tremor's loudness swing."""
+    n = 480
+    frames = np.lib.stride_tricks.sliding_window_view(y, n)[::n // 2] * np.hanning(n)
+    spec = np.abs(np.fft.rfft(frames, axis=1)) ** 2
+    freqs = np.fft.rfftfreq(n, 1 / SR)
+
+    def band(a, b):
+        return spec[:, (freqs >= a) & (freqs < b)].sum(axis=1) + 1e-20
+    ratio = 10 * np.log10(band(lo, hi) / band(150, 1000))
+    ratio -= np.median(ratio)
+    return float(np.mean(ratio < -3.0)), float(np.mean(ratio < -6.0))
+
+
+def test_deep_tremor_keeps_the_upper_harmonics():
+    """At the steepest point of a 1.5 semitone tremor the upper harmonics move
+    further per hop than the tracking window. Matched against where the previous
+    frame's partials were, more than half of those above 3 kHz found none to
+    continue, lost their phase and cancelled for a frame: the 3-6 kHz band
+    dipped 3 dB or more in 16% of 10 ms windows. Moved by the known pitch change
+    first, all but about 0.1% continue; what remains is the shallow shimmer of
+    partials moving through the spectrum, never 6 dB deep."""
+    t = np.arange(6 * SR) / SR
+    x = sum(k ** -0.7 * np.sin(2 * np.pi * 190.0 * k * t + k) for k in range(1, 47))  # harmonics to 8.7 kHz
+    x = 0.1 * x / np.sqrt(np.mean(x ** 2))
+    lost, mid = {}, {}
+    for label, cls in (("before", UnmovedMatching), ("after", SpectralVoice)):
+        v = counting_fallbacks(cls)(SR, fft_size=2048, block_size=512)
+        v.set_tremor(5.0, 1.5)
+        y = stream(v, x, 512)[v.latency + SR // 2:]
+        lost[label], mid[label] = v.fallbacks / v.partials, band_dip_shares(y, 3000, 6000)
+    assert lost["before"] > 0.3 and mid["before"][0] > 0.05, (lost, mid)  # and the measurement sees it
+    assert lost["after"] < 0.01, lost
+    assert mid["after"][1] == 0.0, mid
+
+
 # ---- breath ---------------------------------------------------------------
 
 def harmonic_to_noise_db(y, f0, width=12.0, fmax=8000.0):

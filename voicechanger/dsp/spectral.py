@@ -213,6 +213,8 @@ class SpectralVoice:
         self._tremor_phase = 0.0
         self._tremor_cycle = 0  # completed tremor cycles: the counter for its rate draws
         self._jitter_state = 0.0
+        self._ratio = 1.0         # the last frame's pitch ratio, after tremor and jitter
+        self._ratio_change = 1.0  # this frame's ratio over the last one's (see _next_phase)
 
     # ---- streaming -------------------------------------------------------
     def process(self, x: np.ndarray) -> np.ndarray:
@@ -265,6 +267,8 @@ class SpectralVoice:
         half = len(k)
         f = self._frame_index
         r, gain = self._character(f)
+        self._ratio_change = r / self._ratio
+        self._ratio = r
 
         # analysis: magnitude + true per-bin frequency (in bins)
         spec = np.fft.rfft(self._frame * self._window)
@@ -384,6 +388,15 @@ class SpectralVoice:
         bin holds no phase, the frame is drawn out of phase with the frames it
         overlaps, and the partial cancels for about a frame (20-60 dB dips).
 
+        "Nearest" is measured after the engine's own pitch change since the
+        previous frame. Tremor, jitter and the pitch setting move every partial
+        by the same known ratio, so the previous frame's sinusoids are first
+        scaled by it, and the window only has to cover the speaker's own glide.
+        Unscaled, a 1-1.5 semitone tremor moved the upper harmonics further
+        than the window per hop at its steepest, and they dropped out: 3 dB or
+        more off the 3-6 kHz band in 16% of 10 ms windows. When the ratio holds
+        still the scale is exactly 1.0, so the output is unchanged.
+
         A continued phase is matched midway between the two frames' centres,
         where they overlap most, by advancing the centre phase at the mean of
         the two frequencies. Matching at the frame start instead leaves the
@@ -397,9 +410,10 @@ class SpectralVoice:
         pf = self._prev_f
         if not self.track_peaks or len(pf) == 0:
             return per_bin
-        j = np.searchsorted(pf, f)
+        moved = pf * self._ratio_change  # where the engine's own pitch change put them
+        j = np.searchsorted(moved, f)
         lo, hi = np.maximum(j - 1, 0), np.minimum(j, len(pf) - 1)
-        d_lo, d_hi = np.abs(f - pf[lo]), np.abs(pf[hi] - f)
+        d_lo, d_hi = np.abs(f - moved[lo]), np.abs(moved[hi] - f)
         near = np.where(d_hi < d_lo, hi, lo)
         cont = self._prev_ph[near] + np.pi * (pf[near] + f) / self.overlap + np.pi * (self._prev_drawn[near] - drawn)
         return np.where(np.minimum(d_lo, d_hi) <= self._track, _wrap(cont), per_bin)

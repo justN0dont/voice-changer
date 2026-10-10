@@ -147,6 +147,8 @@ void SpectralVoice::reset() {
     tremor_phase_ = 0.0;
     tremor_cycle_ = 0;
     jitter_state_ = 0.0;
+    ratio_ = 1.0;
+    ratio_change_ = 1.0;
 }
 
 void SpectralVoice::process(const double* in, double* out, int m) {
@@ -226,6 +228,8 @@ void SpectralVoice::process_frame(double* out_hop) {
     const uint64_t f = frame_index_;
     double gain = 1.0;
     const double r = character(gain);
+    ratio_change_ = r / ratio_;
+    ratio_ = r;
 
     // ---- analysis: magnitude + true per-bin frequency (in bins) ----
     for (int i = 0; i < n; i++) {
@@ -431,12 +435,16 @@ double SpectralVoice::next_phase(double f, double drawn, int dest, int& cursor) 
     // they overlap most; a frame-start match leaves them pi x (frequency
     // change) apart there. `drawn` is the frequency the frame contains: the
     // sinusoid's own for a window lobe, its bin for robot's single-bin lines.
+    // Nearest is measured after the engine's own pitch change since the last
+    // frame (tremor, jitter, the pitch setting), which moves every partial by
+    // ratio_change_; it is exactly 1.0 while the ratio holds still.
     const double per_bin = wrap(sum_phase_[dest] + kTwoPi * f / overlap_);
     const int m = prev_count_;
     if (!track_peaks_ || m == 0) return per_bin;
-    while (cursor < m && prev_f_[cursor] < f) cursor++;  // np.searchsorted, side="left"
+    const double k = ratio_change_;
+    while (cursor < m && prev_f_[cursor] * k < f) cursor++;  // np.searchsorted, side="left"
     const int lo = cursor > 0 ? cursor - 1 : 0, hi = cursor < m ? cursor : m - 1;
-    const double d_lo = std::fabs(f - prev_f_[lo]), d_hi = std::fabs(prev_f_[hi] - f);
+    const double d_lo = std::fabs(f - prev_f_[lo] * k), d_hi = std::fabs(prev_f_[hi] * k - f);
     const int near = d_hi < d_lo ? hi : lo;
     if (std::min(d_lo, d_hi) > track_) return per_bin;
     return wrap(prev_ph_[near] + kPi * (prev_f_[near] + f) / overlap_ + kPi * (prev_drawn_[near] - drawn));
